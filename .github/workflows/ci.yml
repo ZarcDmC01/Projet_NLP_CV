@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [Jesse, Ning, Moustafa]
+    branches: [Jesse, Simo, Matthieu]
 
 jobs:
   check:
