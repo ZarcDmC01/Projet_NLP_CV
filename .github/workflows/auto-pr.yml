@@ -2,7 +2,7 @@ name: Auto PR
 
 on:
   push:
-    branches: [dev]
+    branches: [Jesse, Simo, Matthieu]
 
 jobs:
   open-pr:
@@ -16,10 +16,10 @@ jobs:
       - name: Ouvrir la PR automatiquement
         run: |
           gh pr create \
-            --title "Merge dev → main" \
+            --title "Merge ${{ github.ref_name }} → main" \
             --body "CI verte, prêt à merger" \
             --base main \
-            --head dev \
+            --head ${{ github.ref_name }} \
             --repo ${{ github.repository }} || echo "PR déjà existante"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,6 +3,8 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# Commande de démarage = python ".github\workflows\autowatcher.py"    
+
 FICHIERS_SURVEILLES = [
     "FastAPI_UI.py",
 ]
