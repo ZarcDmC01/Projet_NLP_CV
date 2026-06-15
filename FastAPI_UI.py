@@ -20,3 +20,6 @@ async def get_legend(request: Request, file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8001)
+
+
+print('July ne sert à rien')
