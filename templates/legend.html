@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4 text-center">
+            <h4 class="mb-4">Légende générée</h4>
+
+            {% if image_url %}
+            <img src="{{ image_url }}" class="img-fluid rounded mb-4" style="max-height: 350px; object-fit: contain;">
+            {% endif %}
+
+            <div class="p-3 rounded" style="background-color: #0f1117;">
+                <p class="fs-5 mb-0">{{ legend if legend else "Aucune légende disponible." }}</p>
+            </div>
+
+            <a href="/load_image" class="btn btn-outline-light mt-4">Charger une autre image</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

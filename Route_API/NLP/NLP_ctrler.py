@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from NLP.NLP_service import router as NLP_service
+from Route_API.NLP.NLP_service import router as NLP_service
 
 router = APIRouter(tags = ['NLP_ctrler'])
 

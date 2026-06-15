@@ -1,32 +1,22 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.templating import Jinja2Templates
 import uvicorn
 
-from Image.image_ctrler import router as image_router
-from NLP.NLP_ctrler import router as NLP_router
-from Security.Security_ctrler import router as Security_router
-from Monitoring.Monitoring_ctrler import router as Monitor_ctrler
-
-app = FastAPI(title="API NLP")
+app = FastAPI(title="Commentary_UI")
 templates = Jinja2Templates(directory="templates")
-
-app.include_router(image_router)
-app.include_router(NLP_router)
-app.include_router(Security_router)
-app.include_router(Monitor_ctrler)
 
 @app.get('/index')
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get('/load_image')
 async def load_image(request: Request):
-    return templates.TemplateResponse("load_image.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="load_image.html")
 
-@app.get('/legend')
-async def get_legend(request: Request):
-    return templates.TemplateResponse("legend.html", {"request": request})
+@app.post('/legend')
+async def get_legend(request: Request, file: UploadFile = File(...)):
+    return templates.TemplateResponse(request=request, name="legend.html", context={"legend": "Légende à venir...", "image_url": None})
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run(app, host="localhost", port=8001)
