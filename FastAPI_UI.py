@@ -1,5 +1,9 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from Image.image_ctrler import router as image_router
 
-#da hsqgdjh
+app = FastAPI(title="API NLP¨")
+
+app.include_router(Image)
+app.include_router(NLP)
+
