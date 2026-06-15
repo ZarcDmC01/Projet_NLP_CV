@@ -1,0 +1,39 @@
+Alors le Dataset : Flick8k
+
+Côté IA concevoir un modèle de deep learning qui fait de l'extaction de feature.
+
+-CNN
+-LSTM
+-RNN
+
+Transfert learning
+VGG26, inception V3, ResNet, Yolo ou d'autre.
+
+Brancher l'évalutation des metric par dessus.
+
+
+Côté Interface
+
+Crée une plateforme visuael et une API pour inférer
+
+
+
+Côté Preprocessing
+
+En gros Code moustafa
+
+-Image ; Reshape selon modèle.
+système extraction des feature.
+
+En gros code Ning
+
+-Texte :
+Convertir en minuscule
+Suppresion des chiffre
+Steaming ou lemnatisation
+Tokenisation
+Suppresion stop word
+ajouté des "jeton" début et fin dans les légende.
+
+
+
