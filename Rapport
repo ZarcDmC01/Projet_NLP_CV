@@ -1,0 +1,25 @@
+Lundi 15/06/2026 : {
+
+    Commencement du Projet NLP Computer Vision
+
+    Répartition de l'Equipe : SIMO, MATT, JESS
+
+    Création du Trello de suivie
+
+    Création du Git Hub et du pipeline de CI/CD.
+
+    Création de l'API
+
+    Création de L'interface UI
+
+    Choix FastAPI double serveur.
+
+    Archtecture en Router d'appelle et découopage des route/class en focntion des entité.
+
+    SIMO à fait du jupiter et MATT aussi pour tester et explorer les resource.
+
+    Moi j'ai fais la structure du travaille.
+
+    A par améliorer l'API pour vraiment savoir ce que l'on va en faire pas grand chose en prépa maintenant c'est exploration.
+
+}
