@@ -1,4 +1,7 @@
 from fastapi import APIRouter, FastAPI
 
-APIRouter = APIRouter(tags=['Image'])
+router = APIRouter(tags=['Image'])
 
+@router.post('/image')
+async def post_image():
+    pass
