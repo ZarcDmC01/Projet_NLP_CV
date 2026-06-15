@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h4 class="mb-4">Charger une image</h4>
+            <form action="/legend" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label text-secondary">Sélectionner une image</label>
+                    <input class="form-control bg-dark text-light border-secondary" type="file" name="file" accept="image/*" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Générer la légende</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

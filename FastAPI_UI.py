@@ -1,5 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.templating import Jinja2Templates
+import uvicorn
 
-app = FastAPI()
+app = FastAPI(title="Commentary_UI")
+templates = Jinja2Templates(directory="templates")
 
-#da hsqgdjh
+@app.get('/index')
+async def index(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get('/load_image')
+async def load_image(request: Request):
+    return templates.TemplateResponse(request=request, name="load_image.html")
+
+@app.post('/legend')
+async def get_legend(request: Request, file: UploadFile = File(...)):
+    return templates.TemplateResponse(request=request, name="legend.html", context={"legend": "Légende à venir...", "image_url": None})
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8001)
