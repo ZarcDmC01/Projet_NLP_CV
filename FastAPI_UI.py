@@ -1,4 +1,4 @@
-from fastapi import FastAPI # python .github\workflows\autowatcher.py
+from fastapi import FastAPI 
 
 app = FastAPI()
 
