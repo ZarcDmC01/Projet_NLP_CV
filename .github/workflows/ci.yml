@@ -16,7 +16,7 @@ jobs:
 
       - name: Installer les dépendances
         run: |
-          pip install fastapi tensorflow numpy pillow
+          pip install -r requirements.txt
 
       - name: Vérifier que le code compile
         run: |
