@@ -23,3 +23,12 @@ Lundi 15/06/2026 : {
     A par améliorer l'API pour vraiment savoir ce que l'on va en faire pas grand chose en prépa maintenant c'est exploration.
 
 }
+
+Mardi 16/06/2026 : {
+
+    Preprocessing NLP terminé et fonctionnel. Reste plus qu'a l'inplémenté dans la pipeline.
+
+    Toute la Securité et faites ctrler service class shemas.
+
+    structure API REST page de connexion et d'autentification, création de la base de donner client.
+}
