@@ -1,13 +1,26 @@
 from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
 
 app = FastAPI(title="Commentary_UI")
 templates = Jinja2Templates(directory="templates")
 
+@app.get('/')
+async def root():
+    return RedirectResponse(url='/index')
+
 @app.get('/index')
 async def index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get('/login')
+async def login(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html")
+
+@app.get('/signup')
+async def signup(request: Request):
+    return templates.TemplateResponse(request=request, name="signup.html")
 
 @app.get('/load_image')
 async def load_image(request: Request):

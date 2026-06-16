@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h3 class="fw-bold mb-4 text-center">Créer un compte</h3>
+
+            <div id="error-msg" class="alert alert-danger d-none"></div>
+            <div id="success-msg" class="alert alert-success d-none"></div>
+
+            <form id="signup-form">
+                <div class="mb-3">
+                    <label class="form-label text-secondary">Nom d'utilisateur</label>
+                    <input type="text" id="username" class="form-control bg-dark text-light border-secondary" placeholder="Choisissez un nom d'utilisateur" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary">Email</label>
+                    <input type="email" id="email" class="form-control bg-dark text-light border-secondary" placeholder="votre@email.com" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-secondary">Mot de passe</label>
+                    <input type="password" id="password" class="form-control bg-dark text-light border-secondary" placeholder="Choisissez un mot de passe" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">S'inscrire</button>
+            </form>
+
+            <p class="text-center text-secondary mt-4 mb-0">
+                Déjà un compte ?
+                <a href="/login" class="text-primary">Se connecter</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('signup-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errorDiv = document.getElementById('error-msg');
+    const successDiv = document.getElementById('success-msg');
+    errorDiv.classList.add('d-none');
+    successDiv.classList.add('d-none');
+
+    const res = await fetch('http://localhost:8000/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+        })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        localStorage.setItem('token', data.access_token);
+        successDiv.textContent = 'Compte créé ! Redirection...';
+        successDiv.classList.remove('d-none');
+        setTimeout(() => window.location.href = '/index', 1000);
+    } else {
+        errorDiv.textContent = data.detail || 'Erreur lors de l\'inscription';
+        errorDiv.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

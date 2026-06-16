@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h3 class="fw-bold mb-4 text-center">Connexion</h3>
+
+            <div id="error-msg" class="alert alert-danger d-none"></div>
+
+            <form id="login-form">
+                <div class="mb-3">
+                    <label class="form-label text-secondary">Nom d'utilisateur</label>
+                    <input type="text" id="username" class="form-control bg-dark text-light border-secondary" placeholder="Votre nom d'utilisateur" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-secondary">Mot de passe</label>
+                    <input type="password" id="password" class="form-control bg-dark text-light border-secondary" placeholder="Votre mot de passe" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+            </form>
+
+            <p class="text-center text-secondary mt-4 mb-0">
+                Pas encore de compte ?
+                <a href="/signup" class="text-primary">S'inscrire</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errorDiv = document.getElementById('error-msg');
+    errorDiv.classList.add('d-none');
+
+    const res = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        localStorage.setItem('token', data.access_token);
+        window.location.href = '/index';
+    } else {
+        errorDiv.textContent = data.detail || 'Identifiants incorrects';
+        errorDiv.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

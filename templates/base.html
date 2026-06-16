@@ -18,9 +18,30 @@
         <a class="navbar-brand fw-bold" href="/index">NLP & CV</a>
         <div>
             <a class="btn btn-outline-light btn-sm me-2" href="/load_image">Charger une image</a>
-            <a class="btn btn-outline-light btn-sm" href="/legend">Légende</a>
+            <a class="btn btn-outline-light btn-sm me-2" href="/legend">Légende</a>
+            <span id="nav-auth">
+                <a class="btn btn-outline-light btn-sm me-2" href="/login">Connexion</a>
+                <a class="btn btn-primary btn-sm" href="/signup">S'inscrire</a>
+            </span>
+            <span id="nav-user" class="d-none">
+                <span class="text-secondary me-3 small" id="nav-username"></span>
+                <a class="btn btn-outline-danger btn-sm" href="#" id="logout-btn">Déconnexion</a>
+            </span>
         </div>
     </nav>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (token) {
+            document.getElementById('nav-auth').classList.add('d-none');
+            document.getElementById('nav-user').classList.remove('d-none');
+        }
+        document.getElementById('logout-btn')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        });
+    </script>
     <div class="container">
         {% block content %}{% endblock %}
     </div>
