@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from Route_API.Image.image_ctrler import router as image_router
@@ -7,6 +8,13 @@ from Route_API.Security.Security_ctrler import router as Security_router
 from Route_API.Monitoring.Monitoring_ctrler import router as Monitor_ctrler
 
 app = FastAPI(title="Commentary_API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8001"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(image_router)
 app.include_router(NLP_router)

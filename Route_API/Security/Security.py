@@ -1,66 +1,21 @@
-# class Security():
-#     def __init__(self):
-#         pass
-
-
-
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from pydantic import BaseModel
 from typing import Optional
 import uuid
 
 from models import User, UserProfile, StorageQuota, UserRole, AccountStatus, SessionLocal
 
-# Configuration
-SECRET_KEY = "ta-clé-secrète-super-secure-change-moi-en-prod-🔐"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 jours
-
-# Setup password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Security
-security = HTTPBearer()
+# Déclarés au niveau module car requis par Depends() à la définition de la classe
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_bearer = HTTPBearer()
 
 
-# ====== UTILITIES ======
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def decode_token(token: str) -> Optional[str]:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        return user_id
-    except JWTError:
-        return None
-
-
-# ====== DEPENDENCIES ======
-
-def get_db():
+def _get_db():
     db = SessionLocal()
     try:
         yield db
@@ -68,35 +23,7 @@ def get_db():
         db.close()
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    token = credentials.credentials
-    user_id = decode_token(token)
-
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token invalide ou expiré",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Utilisateur non trouvé",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
-
-
 # ====== SCHEMAS PYDANTIC ======
-
-from pydantic import BaseModel
-
 
 class SignupRequest(BaseModel):
     username: str
@@ -114,62 +41,103 @@ class TokenResponse(BaseModel):
     token_type: str
 
 
-# ====== FONCTIONS AUTH ======
+# ====== CLASSE SECURITY — une méthode = une action ======
 
-def register_user(db: Session, signup_data: SignupRequest) -> TokenResponse:
-    existing_user = db.query(User).filter(
-        (User.username == signup_data.username) | (User.email == signup_data.email)
-    ).first()
+class Security:
 
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cet utilisateur ou email existe déjà"
+    SECRET_KEY = "ta-clé-secrète-super-secure-change-moi-en-prod"
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 jours
+
+    get_db = staticmethod(_get_db)
+
+    # ====== MOT DE PASSE ======
+
+    @staticmethod
+    def get_password_hash(password: str) -> str:
+        return _pwd_context.hash(password)
+
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        return _pwd_context.verify(plain_password, hashed_password)
+
+    # ====== TOKEN JWT ======
+
+    @classmethod
+    def create_access_token(cls, data: dict, expires_delta: Optional[timedelta] = None) -> str:
+        to_encode = data.copy()
+        expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=cls.ACCESS_TOKEN_EXPIRE_MINUTES))
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, cls.SECRET_KEY, algorithm=cls.ALGORITHM)
+
+    @classmethod
+    def decode_token(cls, token: str) -> Optional[str]:
+        try:
+            payload = jwt.decode(token, cls.SECRET_KEY, algorithms=[cls.ALGORITHM])
+            return payload.get("sub")
+        except JWTError:
+            return None
+
+    # ====== BASE DE DONNÉES ======
+
+    @staticmethod
+    def create_user(db: Session, signup_data: SignupRequest, hashed_password: str) -> User:
+        existing = db.query(User).filter(
+            (User.username == signup_data.username) | (User.email == signup_data.email)
+        ).first()
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cet utilisateur ou email existe déjà"
+            )
+
+        user_id = str(uuid.uuid4())
+        user = User(
+            id=user_id,
+            username=signup_data.username,
+            email=signup_data.email,
+            hashed_password=hashed_password,
+            role=UserRole.USER,
+            status=AccountStatus.ACTIVE,
+            email_verified=False
         )
+        db.add(user)
+        db.add(UserProfile(id=str(uuid.uuid4()), user_id=user_id, language="fr", timezone="UTC"))
+        db.add(StorageQuota(id=str(uuid.uuid4()), user_id=user_id, limit_bytes=5 * 1024 * 1024 * 1024))
+        db.commit()
+        db.refresh(user)
+        return user
 
-    user_id = str(uuid.uuid4())
+    @staticmethod
+    def get_user_by_username(db: Session, username: str) -> Optional[User]:
+        return db.query(User).filter(User.username == username).first()
 
-    user = User(
-        id=user_id,
-        username=signup_data.username,
-        email=signup_data.email,
-        hashed_password=get_password_hash(signup_data.password),
-        role=UserRole.USER,
-        status=AccountStatus.ACTIVE,
-        email_verified=False
-    )
+    @staticmethod
+    def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+        return db.query(User).filter(User.id == user_id).first()
 
-    profile = UserProfile(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        language="fr",
-        timezone="UTC"
-    )
+    # ====== DÉPENDANCE FASTAPI (routes protégées) ======
 
-    quota = StorageQuota(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        limit_bytes=5 * 1024 * 1024 * 1024  # 5GB
-    )
+    @staticmethod
+    async def get_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+        db: Session = Depends(_get_db)
+    ) -> User:
+        user_id = Security.decode_token(credentials.credentials)
 
-    db.add(user)
-    db.add(profile)
-    db.add(quota)
-    db.commit()
-    db.refresh(user)
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalide ou expiré",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-    access_token = create_access_token(data={"sub": user.id})
-    return TokenResponse(access_token=access_token, token_type="bearer")
-
-
-def login_user(db: Session, login_data: LoginRequest) -> TokenResponse:
-    user = db.query(User).filter(User.username == login_data.username).first()
-
-    if not user or not verify_password(login_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Nom d'utilisateur ou mot de passe incorrect"
-        )
-
-    access_token = create_access_token(data={"sub": user.id})
-    return TokenResponse(access_token=access_token, token_type="bearer")
+        user = Security.get_user_by_id(db, user_id)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Utilisateur non trouvé",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return user
