@@ -8,7 +8,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get('/')
 async def root():
-    return RedirectResponse(url='/index')
+    return RedirectResponse(url='/login')
 
 @app.get('/index')
 async def index(request: Request):

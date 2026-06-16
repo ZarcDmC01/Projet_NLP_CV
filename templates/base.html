@@ -32,10 +32,18 @@
 
     <script>
         const token = localStorage.getItem('token');
+        const publicPages = ['/login', '/signup'];
+        const currentPage = window.location.pathname;
+
+        if (!token && !publicPages.includes(currentPage)) {
+            window.location.href = '/login';
+        }
+
         if (token) {
             document.getElementById('nav-auth').classList.add('d-none');
             document.getElementById('nav-user').classList.remove('d-none');
         }
+
         document.getElementById('logout-btn')?.addEventListener('click', function(e) {
             e.preventDefault();
             localStorage.removeItem('token');
