@@ -23,7 +23,9 @@ def _get_db():
         db.close()
 
 
-# ====== SCHEMAS PYDANTIC ======
+# ================================================================
+#  SCHEMAS PYDANTIC
+# ================================================================
 
 class SignupRequest(BaseModel):
     username: str
@@ -41,7 +43,9 @@ class TokenResponse(BaseModel):
     token_type: str
 
 
-# ====== CLASSE SECURITY — une méthode = une action ======
+# ================================================================
+#  CLASSE SECURITY — une méthode = une action
+# ================================================================
 
 class Security:
 
@@ -51,20 +55,27 @@ class Security:
 
     get_db = staticmethod(_get_db)
 
-    # ====== MOT DE PASSE ======
+    # ================================================================
+    #  1. MOT DE PASSE
+    # ================================================================
 
     @staticmethod
     def get_password_hash(password: str) -> str:
+        """Transforme le mot de passe en hash bcrypt."""
         return _pwd_context.hash(password)
 
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """Compare le mot de passe saisi avec le hash stocké en base."""
         return _pwd_context.verify(plain_password, hashed_password)
 
-    # ====== TOKEN JWT ======
+    # ================================================================
+    #  2. TOKEN JWT
+    # ================================================================
 
     @classmethod
     def create_access_token(cls, data: dict, expires_delta: Optional[timedelta] = None) -> str:
+        """Génère un token JWT signé avec expiration."""
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=cls.ACCESS_TOKEN_EXPIRE_MINUTES))
         to_encode.update({"exp": expire})
@@ -72,16 +83,20 @@ class Security:
 
     @classmethod
     def decode_token(cls, token: str) -> Optional[str]:
+        """Décode le token JWT et retourne l'user_id (sub), None si invalide."""
         try:
             payload = jwt.decode(token, cls.SECRET_KEY, algorithms=[cls.ALGORITHM])
             return payload.get("sub")
         except JWTError:
             return None
 
-    # ====== BASE DE DONNÉES ======
+    # ================================================================
+    #  3. BASE DE DONNÉES
+    # ================================================================
 
     @staticmethod
     def create_user(db: Session, signup_data: SignupRequest, hashed_password: str) -> User:
+        """Crée un utilisateur, son profil et son quota en base."""
         existing = db.query(User).filter(
             (User.username == signup_data.username) | (User.email == signup_data.email)
         ).first()
@@ -111,19 +126,24 @@ class Security:
 
     @staticmethod
     def get_user_by_username(db: Session, username: str) -> Optional[User]:
+        """Recherche un utilisateur par son nom d'utilisateur."""
         return db.query(User).filter(User.username == username).first()
 
     @staticmethod
     def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+        """Recherche un utilisateur par son identifiant unique."""
         return db.query(User).filter(User.id == user_id).first()
 
-    # ====== DÉPENDANCE FASTAPI (routes protégées) ======
+    # ================================================================
+    #  4. DÉPENDANCE FASTAPI — routes protégées
+    # ================================================================
 
     @staticmethod
     async def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(_bearer),
         db: Session = Depends(_get_db)
     ) -> User:
+        """Vérifie le token Bearer et retourne l'utilisateur connecté."""
         user_id = Security.decode_token(credentials.credentials)
 
         if user_id is None:
