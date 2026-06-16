@@ -89,7 +89,7 @@ class CaptionTrainingPipeline:
                     X1, X2, y = list(), list(), list()
                     n = 0
 
-    def fit(self, train_descriptions, train_features, tokenizer, epochs=10, batch_size=32):
+    def fit(self, train_descriptions, train_features, tokenizer, epochs=20, batch_size=32):
         """
         Lance la boucle d'entraînement principale du réseau de neurones.
         """

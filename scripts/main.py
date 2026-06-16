@@ -24,7 +24,7 @@ def main():
     
     # Hyperparamètres d'entraînement
     BATCH_SIZE = 64
-    EPOCHS = 10
+    EPOCHS = 20
 
     print("=== ÉTAPE 1 : TRAITEMENT TEXTUEL ===")
     text_pipe = TextProcessingPipeline()
@@ -126,7 +126,7 @@ def main():
         batch_size=BATCH_SIZE
     )
     
-    train_pipe.save_model("flickr8k_caption_generator_resnet.keras")
+    train_pipe.save_model("flickr8k_caption_generator_resnet2.keras")
     print("\n=== PROCESSUS TERMINÉ AVEC SUCCÈS ===")
 
 if __name__ == "__main__":
