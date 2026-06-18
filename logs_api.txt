@@ -1,0 +1,6 @@
+[API] Chargement du pipeline ML...
+[Captioner] device=cuda | vocab=4097 mots | modèle=OK
+[API] Pipeline prêt.
+INFO:     ::1:53038 - "GET /image/status HTTP/1.1" 200 OK
+INFO:     ::1:52013 - "GET /image/status HTTP/1.1" 200 OK
+INFO:     ::1:56763 - "POST /image/caption HTTP/1.1" 200 OK

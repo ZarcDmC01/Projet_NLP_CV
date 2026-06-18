@@ -1,9 +1,7 @@
-import os
 import io
 import pickle
 import numpy as np
 from PIL import Image
-from tqdm import tqdm
 
 
 class ImageProcessingPipeline:
@@ -60,34 +58,7 @@ class ImageProcessingPipeline:
         return feature_vector.reshape(-1)
 
     # ================================================================
-    #  5. EXTRACTION EN MASSE (entraînement)
-    # ================================================================
-
-    def extract_features_batch(self, directory_path: str, model_backbone, valid_ids=None) -> dict:
-        """Extrait les features de toutes les images d'un dossier."""
-        features = dict()
-
-        print(f"Extraction des features (taille cible : {self.target_size})...")
-        for name in tqdm(os.listdir(directory_path)):
-            image_id = name.split('.')[0]
-
-            if valid_ids is not None and image_id not in valid_ids:
-                continue
-
-            path = os.path.join(directory_path, name)
-            if os.path.isfile(path) and name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                img         = self.load_from_path(path)
-                img         = self.resize(img)
-                arr         = self.to_array(img)
-                arr         = self.normalize(arr)
-                tensor      = self.add_batch_dim(arr)
-                features_v  = self.extract_features(tensor, model_backbone)
-                features[image_id] = self.flatten_features(features_v)
-
-        return features
-
-    # ================================================================
-    #  6. PERSISTANCE
+    #  5. PERSISTANCE
     # ================================================================
 
     @staticmethod

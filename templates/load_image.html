@@ -1,17 +1,160 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card p-4">
+    <div class="col-md-7">
+
+        <!-- Formulaire upload -->
+        <div class="card p-4" id="upload-card">
             <h4 class="mb-4">Charger une image</h4>
-            <form action="/legend" method="post" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label text-secondary">Sélectionner une image</label>
-                    <input class="form-control bg-dark text-light border-secondary" type="file" name="file" accept="image/*" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Générer la légende</button>
-            </form>
+
+            <div class="mb-3">
+                <label class="form-label text-secondary">Sélectionner une image</label>
+                <input class="form-control bg-dark text-light border-secondary"
+                       type="file" id="file-input" accept="image/*" required>
+            </div>
+
+            <!-- Prévisualisation -->
+            <div id="preview-box" class="mb-3 d-none text-center">
+                <img id="preview-img" class="img-fluid rounded" style="max-height: 300px; object-fit: contain;">
+            </div>
+
+            <button id="submit-btn" class="btn btn-primary w-100" disabled>
+                Générer la légende
+            </button>
         </div>
+
+        <!-- État chargement -->
+        <div id="loading-card" class="card p-4 text-center d-none">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-secondary mb-0">Analyse de l'image en cours…</p>
+        </div>
+
+        <!-- Résultat -->
+        <div id="result-card" class="card p-4 text-center d-none">
+            <h4 class="mb-4">Légende générée</h4>
+
+            <img id="result-img" class="img-fluid rounded mb-4"
+                 style="max-height: 350px; object-fit: contain;">
+
+            <div class="p-3 rounded mb-4" style="background-color: #0f1117;">
+                <p class="fs-5 mb-0" id="result-caption"></p>
+            </div>
+
+            <button class="btn btn-outline-light" id="reset-btn">
+                Charger une autre image
+            </button>
+        </div>
+
+        <!-- Erreur -->
+        <div id="error-alert" class="alert alert-danger mt-3 d-none"></div>
+
     </div>
 </div>
+
+<script>
+const fileInput  = document.getElementById('file-input');
+const submitBtn  = document.getElementById('submit-btn');
+const previewBox = document.getElementById('preview-box');
+const previewImg = document.getElementById('preview-img');
+
+const uploadCard  = document.getElementById('upload-card');
+const loadingCard = document.getElementById('loading-card');
+const resultCard  = document.getElementById('result-card');
+const errorAlert  = document.getElementById('error-alert');
+
+// Prévisualisation dès qu'un fichier est sélectionné
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewBox.classList.remove('d-none');
+    submitBtn.disabled = false;
+    errorAlert.classList.add('d-none');
+});
+
+// Soumission → appel direct à l'API avec le Bearer token
+submitBtn.addEventListener('click', async () => {
+    const file  = fileInput.files[0];
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Affichage chargement
+    uploadCard.classList.add('d-none');
+    loadingCard.classList.remove('d-none');
+    errorAlert.classList.add('d-none');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        // Étape 1 — upload image → preprocessing → sauvegarde features → image_id
+        const resImage = await fetch('http://localhost:8000/image/', {
+            method:  'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body:    formData,
+        });
+
+        if (resImage.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            return;
+        }
+        if (!resImage.ok) {
+            const err = await resImage.json().catch(() => ({}));
+            throw new Error(err.detail || `Erreur image ${resImage.status}`);
+        }
+
+        const imageData = await resImage.json();
+        if (!imageData.image_id) {
+            throw new Error(imageData.message || 'Features non disponibles.');
+        }
+
+        // Étape 2 — image_id → charge features persistées → légende LSTM
+        const resCaption = await fetch('http://localhost:8000/model/caption', {
+            method:  'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type':  'application/json',
+            },
+            body: JSON.stringify({ image_id: imageData.image_id }),
+        });
+
+        if (!resCaption.ok) {
+            const err = await resCaption.json().catch(() => ({}));
+            throw new Error(err.detail || `Erreur modèle ${resCaption.status}`);
+        }
+
+        const data = await resCaption.json();
+
+        // Affichage du résultat
+        document.getElementById('result-img').src     = URL.createObjectURL(file);
+        document.getElementById('result-caption').textContent = data.caption;
+
+        loadingCard.classList.add('d-none');
+        resultCard.classList.remove('d-none');
+
+    } catch (err) {
+        loadingCard.classList.add('d-none');
+        uploadCard.classList.remove('d-none');
+        errorAlert.textContent = err.message;
+        errorAlert.classList.remove('d-none');
+    }
+});
+
+// Réinitialiser
+document.getElementById('reset-btn').addEventListener('click', () => {
+    fileInput.value = '';
+    previewBox.classList.add('d-none');
+    submitBtn.disabled = true;
+    resultCard.classList.add('d-none');
+    uploadCard.classList.remove('d-none');
+    errorAlert.classList.add('d-none');
+});
+</script>
 {% endblock %}

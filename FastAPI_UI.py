@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
@@ -26,9 +26,9 @@ async def signup(request: Request):
 async def load_image(request: Request):
     return templates.TemplateResponse(request=request, name="load_image.html")
 
-@app.post('/legend')
-async def get_legend(request: Request, file: UploadFile = File(...)):
-    return templates.TemplateResponse(request=request, name="legend.html", context={"legend": "Légende à venir...", "image_url": None})
+@app.get('/legend')
+async def legend(request: Request):
+    return templates.TemplateResponse(request=request, name="legend.html")
 
 
 if __name__ == "__main__":

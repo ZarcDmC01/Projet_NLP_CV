@@ -9,7 +9,7 @@ router = APIRouter(prefix="/image", tags=["Image"])
 @router.post("/")
 async def upload_image(
     file: UploadFile = File(...),
-    current_user=Depends(Security.get_current_user)
+    current_user=Depends(Security.get_current_user),
 ):
     """
     Reçoit une image uploadée, exécute automatiquement tout le pipeline :
@@ -17,5 +17,4 @@ async def upload_image(
     Accessible uniquement aux utilisateurs connectés.
     """
     image_bytes = await file.read()
-    result = ImageService.process_image(image_bytes)
-    return result
+    return ImageService.process_image(image_bytes, filename=file.filename)
