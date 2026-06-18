@@ -18,13 +18,13 @@ def main():
     
     # AJUSTEMENT POUR RESNET50 :
     # Les features de ResNet50 font 2048 dimensions au lieu de 4096 pour VGG16
-    FEATURES_PICKLE = "data/features_resnet50.pkl"   
-    TARGET_IMAGE_SIZE = (224, 224) 
+    FEATURES_PICKLE = "data/features_inceptionv3.pkl"   
+    TARGET_IMAGE_SIZE = (299, 299) 
     FEATURE_DIMENSION = 2048                         # Changé de 4096 à 2048
     
     # Hyperparamètres d'entraînement
     BATCH_SIZE = 64
-    EPOCHS = 20
+    EPOCHS = 10
 
     print("=== ÉTAPE 1 : TRAITEMENT TEXTUEL ===")
     text_pipe = TextProcessingPipeline()
@@ -126,7 +126,7 @@ def main():
         batch_size=BATCH_SIZE
     )
     
-    train_pipe.save_model("flickr8k_caption_generator_resnet2.keras")
+    train_pipe.save_model("flickr8k_caption_generator_inception.keras")
     print("\n=== PROCESSUS TERMINÉ AVEC SUCCÈS ===")
 
 if __name__ == "__main__":
