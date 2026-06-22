@@ -18,7 +18,7 @@ from Route_API.Model.model import (
     PAD, UNK, SOS, EOS,
 )
 
-TEXT_PATH = Path(__file__).parent.parent.parent / "Data" / "Flickr8k_text"
+TEXT_PATH = Path(__file__).parent.parent.parent / "vocab"
 
 
 def _tokenize(caption: str) -> list[str]:

@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-MODEL_PATH = Path(__file__).parent.parent.parent / "Data" / "caption_model_best.pth"
+MODEL_PATH = Path(__file__).parent.parent.parent / "models" / "caption_model_best.pth"
 
 EMBED_DIM  = 256
 HIDDEN_DIM = 512

@@ -44,9 +44,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Commentary_API", lifespan=lifespan)
 
+_cors_origins = [
+    "http://localhost:8001",
+    "https://projetnlpcv.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8001"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
