@@ -47,7 +47,7 @@ app = FastAPI(title="Commentary_API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8001", "https://projetnlpcv.vercel.app"],
-    allow_origin_regex=r"https://projetnlpcv.*\.vercel\.app",
+    allow_origin_regex=r"https://projet-nlp-cv.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
