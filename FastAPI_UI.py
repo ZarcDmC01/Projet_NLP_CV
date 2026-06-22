@@ -9,7 +9,7 @@ app = FastAPI(title="Commentary_UI")
 _dir = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(_dir, "templates"))
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
+API_URL = os.environ.get("API_URL", "https://projet-nlp-cv.onrender.com")
 
 
 @app.get('/')
