@@ -1,8 +1,10 @@
 import enum
+import os
 from sqlalchemy import create_engine, Column, String, Boolean, BigInteger, Enum
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "sqlite:///./nlp_cv.db"
+_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nlp_cv.db")
+DATABASE_URL = f"sqlite:///{_db_path}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
