@@ -40,9 +40,18 @@ Render (FastAPI_API.py)         ← ML, auth, SQLite, ResNet34 + LSTM
 - **Conclusion** : Vercel n'est pas adapté pour du ML avec PyTorch
 
 ### Deux repos GitHub séparés
-- Vercel avait créé automatiquement un repo `projet-nlp-cv` (avec tirets) lors de son flow "Clone" au lieu d'importer `Projet_NLP_CV` (avec underscores)
-- Les commits allaient vers `Projet_NLP_CV` mais Render regardait `projet-nlp-cv` → désynchronisation totale
-- **Résolution** : reconnexion manuelle de Render au bon repo, suppression du repo dupliqué
+
+> ⚠️ **PIÈGE MAJEUR — à lire avant tout nouveau projet Vercel**
+
+Lors de la création d'un projet sur Vercel, il y a **deux options distinctes** :
+- **"Import Git Repository"** → Vercel se connecte à ton repo existant, **rien n'est créé**
+- **"Clone Template"** → Vercel crée un nouveau repo sur ton GitHub (souvent avec un nom différent, tirets à la place des underscores)
+
+**Ce qui s'est passé** : Vercel avait créé automatiquement un repo `projet-nlp-cv` (avec tirets) au lieu d'importer `Projet_NLP_CV` (avec underscores). Les commits allaient vers `Projet_NLP_CV` mais Render regardait `projet-nlp-cv` → désynchronisation totale, rien ne se déployait.
+
+**Résolution** : reconnexion manuelle de Render au bon repo, suppression du repo dupliqué.
+
+**À faire systématiquement** : lors de la création d'un projet Vercel, toujours choisir **"Import"** et vérifier que l'URL du repo dans les settings Vercel correspond exactement au repo GitHub sur lequel tu travailles.
 
 ---
 
