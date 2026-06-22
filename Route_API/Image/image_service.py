@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from Route_API.Image.image import ImageProcessingPipeline
 
-FEATURES_STORE = Path(__file__).parent.parent.parent / "Data" / "features_api.pkl"
+FEATURES_STORE = Path("/tmp/features_api.pkl") if Path("/tmp").exists() else Path(__file__).parent.parent.parent / "features_api.pkl"
 
 _IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 _IMAGENET_STD  = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
