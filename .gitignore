@@ -177,3 +177,6 @@ pyrightconfig.json
 
 # Project data
 Data/
+
+# SQLite databases
+*.db

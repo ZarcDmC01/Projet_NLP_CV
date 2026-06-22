@@ -1,0 +1,11 @@
+FastAPI_API.py
+Route_API/
+models.py
+*.db
+*.ipynb
+*.pdf
+*.zip
+Rapport/
+logs_*.txt
+Plan.txt
+Data/

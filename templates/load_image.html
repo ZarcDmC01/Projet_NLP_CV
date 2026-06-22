@@ -94,7 +94,7 @@ submitBtn.addEventListener('click', async () => {
 
     try {
         // Étape 1 — upload image → preprocessing → sauvegarde features → image_id
-        const resImage = await fetch('http://localhost:8000/image/', {
+        const resImage = await fetch(`${API_URL}/image/`, {
             method:  'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body:    formData,
@@ -116,7 +116,7 @@ submitBtn.addEventListener('click', async () => {
         }
 
         // Étape 2 — image_id → charge features persistées → légende LSTM
-        const resCaption = await fetch('http://localhost:8000/model/caption', {
+        const resCaption = await fetch(`${API_URL}/model/caption`, {
             method:  'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

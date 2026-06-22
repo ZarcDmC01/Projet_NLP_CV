@@ -33,7 +33,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
     const errorDiv = document.getElementById('error-msg');
     errorDiv.classList.add('d-none');
 
-    const res = await fetch('http://localhost:8000/auth/login', {
+    const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
