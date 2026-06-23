@@ -32,19 +32,15 @@ def load_image_ids(filename):
 # CONFIGURATION CENTRALE
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Chemins des données
 TOKEN_FILE_PATH      = "data/Flickr8k.token.txt"
 IMAGES_DIR_PATH      = "data/Flicker8k_Dataset"
 TRAIN_SPLIT_PATH     = "data/Flickr_8k.trainImages.txt"
 DEV_SPLIT_PATH       = "data/Flickr_8k.devImages.txt"
 
-# AJUSTEMENT CONFIGURATION :
-# Modifié pour correspondre à ResNet50 (224x224 au lieu de 299x299 qui est pour Inception)
 FEATURES_PICKLE      = "data/features_resnet50.pkl"   
 TARGET_IMAGE_SIZE    = (224, 224) 
 FEATURE_DIMENSION    = 2048                         
 
-# Hyperparamètres d'entraînement
 BATCH_SIZE = 64
 EPOCHS = 10
 
@@ -85,7 +81,6 @@ def main():
     text_pipe.save_pipeline(pipeline_path="data/text_pipeline.pkl", tokenizer_path="data/tokenizer.pkl")
 
 
-    # ── ÉTAPE 2 : EXTRACTION DES CARACTÉRISTIQUES GRAPHIQUES ─────────────────
     print("\n=== ÉTAPE 2 : EXTRACTION DES CARACTÉRISTIQUES GRAPHIQUES ===")
     img_pipe = ImageProcessingPipeline(target_size=TARGET_IMAGE_SIZE)
 
@@ -95,23 +90,17 @@ def main():
     else:
         print("Aucun cache trouvé. Initialisation du modèle ResNet50 pré-entraîné...")
         
-        # Chargement du modèle de vision PyTorch
         weights = models.ResNet50_Weights.DEFAULT
         resnet50 = models.resnet50(weights=weights)
         
-        # Remplacement de la couche de classification finale par une couche Identité 
-        # pour récupérer le vecteur de caractéristiques de taille 2048
         resnet50.fc = torch.nn.Identity()
         
-        # Passage en mode évaluation (désactive le dropout et la batchnorm)
         resnet50.eval()
 
-        # Configuration du périphérique de calcul (CPU ou GPU)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         resnet50 = resnet50.to(device)
         print(f"Modèle de vision envoyé sur le périphérique : {device}")
 
-        # Définition stricte de la pipeline de transformation d'images pour ResNet50
         preprocess_transform = transforms.Compose([
             transforms.Resize(TARGET_IMAGE_SIZE),
             transforms.ToTensor(),
@@ -131,17 +120,13 @@ def main():
 
             if os.path.isfile(path) and name.lower().endswith(('.png', '.jpg', '.jpeg')):
                 try:
-                    # Chargement PIL natif requis par torchvision.transforms
                     img_pil = Image.open(path).convert('RGB')
                     
-                    # Application des transformations et ajout de la dimension de Batch (1, 3, 224, 224)
                     tensor_img = preprocess_transform(img_pil).unsqueeze(0).to(device)
 
-                    # Inférence sans calcul de gradients (gain de mémoire et vitesse)
                     with torch.no_grad():
                         feature_vector = resnet50(tensor_img)
 
-                    # Shape : (2048,) après flatten
                     image_features[image_id] = feature_vector.cpu().numpy().flatten()
 
                 except Exception as e:
@@ -151,7 +136,6 @@ def main():
 
     print(f"Vecteurs disponibles : {len(image_features)}")
 
-    # Filtrage des features sur le split d'entraînement
     train_features = {
         img_id: feat
         for img_id, feat in image_features.items()
@@ -160,7 +144,6 @@ def main():
     print(f"Features d'entraînement après filtrage : {len(train_features)}")
 
 
-    # ── ÉTAPE 3 : ENTRAÎNEMENT DU MODÈLE FUSION ──────────────────────────────
     print("\n=== ÉTAPE 3 : ENTRAÎNEMENT DU MODÈLE FUSION ===")
 
     train_pipe = CaptionTrainingPipeline(

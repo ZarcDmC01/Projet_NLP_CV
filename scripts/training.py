@@ -34,18 +34,15 @@ class CaptionTrainingPipeline:
         Construit l'architecture 'Merge' unifiée associant
         la branche Vision et la branche NLP.
         """
-        # --- BRANCHE VISION ---
         inputs_image = keras.Input(shape=(self.feature_dim,), name="image_inputs")
         fe1 = layers.Dropout(0.5)(inputs_image)
         fe2 = layers.Dense(256, activation="relu")(fe1)
 
-        # --- BRANCHE NLP ---
         inputs_text = keras.Input(shape=(self.max_length,), name="text_inputs")
         se1 = layers.Embedding(input_dim=self.vocab_size, output_dim=256, mask_zero=True)(inputs_text)
         se2 = layers.Dropout(0.5)(se1)
         se3 = layers.LSTM(256)(se2)
 
-        # --- FUSION ET SORTIE ---
         decoder1 = layers.add([fe2, se3])
         decoder2 = layers.Dense(256, activation="relu")(decoder1)
         outputs = layers.Dense(self.vocab_size, activation="softmax", name="output_layer")(decoder2)
@@ -133,7 +130,6 @@ class CaptionTrainingPipeline:
         :param max_length:    Longueur maximale de séquence
         :return:              Légende générée sous forme de chaîne de caractères
         """
-        # Dictionnaire inverse construit une seule fois (O(1) par lookup au lieu de O(n))
         index_to_word = {idx: word for word, idx in tokenizer.word_index.items()}
 
         in_text = start_token
@@ -157,7 +153,6 @@ class CaptionTrainingPipeline:
             if word == end_token:
                 break
 
-        # Nettoyage des tokens de contrôle pour l'affichage final
         final_caption = in_text.replace(start_token, '').replace(end_token, '').strip()
         return final_caption
 
@@ -176,8 +171,6 @@ class CaptionTrainingPipeline:
         """
         index_to_word = {idx: word for word, idx in tokenizer.word_index.items()}
 
-        # Chaque candidat est : [score_log_probabilité_cumulé, séquence_de_mots]
-        # On initialise avec le token de départ et un score nul
         candidates = [[0.0, [start_token]]]
 
         for _ in range(max_length):
@@ -186,12 +179,10 @@ class CaptionTrainingPipeline:
             for score, seq in candidates:
                 last_word = seq[-1]
 
-                # Si ce candidat a déjà atteint le token de fin, on le conserve tel quel
                 if last_word == end_token:
                     next_candidates.append([score, seq])
                     continue
 
-                # Encodage et prédiction
                 in_text = ' '.join(seq)
                 sequence = tokenizer.texts_to_sequences([in_text])[0]
                 sequence = keras.utils.pad_sequences([sequence], maxlen=max_length)
@@ -201,29 +192,23 @@ class CaptionTrainingPipeline:
                     verbose=0
                 )[0]
 
-                # On sélectionne les 'beam_width' mots les plus probables
                 top_indices = np.argsort(yhat)[-beam_width:]
 
                 for idx in top_indices:
                     word = index_to_word.get(idx)
                     if word is None:
                         continue
-                    # Score = somme des log-probabilités (évite l'underflow numérique)
                     new_score = score + np.log(yhat[idx] + 1e-10)
                     new_seq = seq + [word]
                     next_candidates.append([new_score, new_seq])
 
-            # On garde uniquement les 'beam_width' meilleurs candidats
             candidates = sorted(next_candidates, key=lambda x: x[0], reverse=True)[:beam_width]
 
-            # Condition d'arrêt anticipée : tous les candidats se sont terminés
             if all(seq[-1] == end_token for _, seq in candidates):
                 break
 
-        # Sélection du meilleur candidat (score le plus élevé)
         best_seq = candidates[0][1]
 
-        # Nettoyage des tokens de contrôle
         final_caption = ' '.join(
             word for word in best_seq
             if word not in (start_token, end_token)

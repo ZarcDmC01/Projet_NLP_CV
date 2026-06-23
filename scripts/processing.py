@@ -4,7 +4,6 @@ import pickle
 from collections import Counter
 from tqdm import tqdm
 
-# Configuration du backend conformément à votre environnement de calcul
 os.environ["KERAS_BACKEND"] = "torch"
 import keras
 from keras.src.legacy.preprocessing.text import Tokenizer
@@ -41,11 +40,8 @@ class TextProcessingPipeline:
             tokens = line.split()
             if len(tokens) < 2:
                 continue
-            # L'identifiant de l'image et l'index de la description
             image_id, image_desc = tokens[0], tokens[1:]
-            # Nettoyage de l'extension pour garder uniquement la clé unique
             image_id = image_id.split('.')[0]
-            # Reconstitution de la phrase brute
             desc_phrase = ' '.join(image_desc)
 
             if image_id not in mapping:
@@ -71,7 +67,6 @@ class TextProcessingPipeline:
                 words = desc.split()
                 words = [word.lower() for word in words]
                 words = [word.translate(table) for word in words]
-                # Suppression des tokens isolés non alphabétiques sauf 'a' et 'i'
                 words = [
                     word for word in words
                     if word.isalpha() and (len(word) > 1 or word in ['a', 'i'])
@@ -90,7 +85,6 @@ class TextProcessingPipeline:
         'min_frequency' en les remplaçant par 'unk', puis injection finale
         des balises de contrôle startseq / endseq.
         """
-        # Comptage global de la fréquence de chaque mot dans tout le dataset
         word_counts = Counter()
         for desc_list in cleaned_descriptions.values():
             for desc in desc_list:
@@ -101,13 +95,11 @@ class TextProcessingPipeline:
             final_mapping[key] = list()
             for desc in desc_list:
                 words = desc.split()
-                # Remplacement des mots sous le seuil par le jeton générique 'unk'
                 processed_words = [
                     word if word_counts[word] >= min_frequency else 'unk'
                     for word in words
                 ]
                 processed_desc = ' '.join(processed_words)
-                # Encadrement par les balises de contrôle
                 caption_with_tokens = f"{self.start_token} {processed_desc} {self.end_token}"
                 final_mapping[key].append(caption_with_tokens)
 
@@ -219,7 +211,6 @@ class ImageProcessingPipeline:
         self.target_size = target_size
 
 
-    # Exemple d'alignement dans processing.py
     def preprocess_single_image(self, image_path):
         """
         Charge une image, l'ajuste, et applique la normalisation standard 
@@ -239,7 +230,6 @@ class ImageProcessingPipeline:
                 std=[0.229, 0.224, 0.225]
             )
         ])
-        # Ajout de la dimension de batch et conversion numpy pour correspondre à vos attentes
         tensor_img = preprocess(img).unsqueeze(0)
         return tensor_img
 
@@ -267,9 +257,7 @@ class ImageProcessingPipeline:
             if os.path.isfile(path) and name.lower().endswith(('.png', '.jpg', '.jpeg')):
                 prepared_img = self.preprocess_single_image(path)
                 feature_vector = model_backbone.predict(prepared_img, verbose=0)
-                # Aplatissement du vecteur (ex: de (1, 2048) à (2048,))
                 features[image_id] = feature_vector.reshape(-1)
-
         return features
 
     @staticmethod
