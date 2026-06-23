@@ -65,8 +65,11 @@ class TextProcessingPipeline:
                 # Suppression de la ponctuation
                 words = [word.translate(table) for word in words]
                 # Suppression des tokens isolés de moins de 2 lettres (ex: 'a') ou contenant des chiffres
-                words = [word for word in words if len(word) > 1 and word.isalpha()]
-                
+                words = [
+                    word for word in words 
+                    if word.isalpha() and (len(word) > 1 or word in ['a', 'i'])
+                ]
+
                 # Reconstitution de la phrase intermédiaire nettoyée
                 cleaned_desc = ' '.join(words)
                 cleaned_mapping[key].append(cleaned_desc)
@@ -114,7 +117,7 @@ class TextProcessingPipeline:
             for desc in descriptions[key]:
                 lines.append(desc)
                 
-        self.tokenizer = Tokenizer()
+        self.tokenizer = Tokenizer(oov_token='unk')
         self.tokenizer.fit_on_texts(lines)
         return self.tokenizer
 
