@@ -1,6 +1,7 @@
 import os
 import string
 import pickle
+from collections import Counter
 from tqdm import tqdm
 
 # Configuration du backend conformément à votre environnement de calcul
@@ -10,8 +11,8 @@ from keras.src.legacy.preprocessing.text import Tokenizer
 
 class TextProcessingPipeline:
     """
-    Pipeline dédiée au chargement, nettoyage, tokenisation et vectorisation 
-    des légendes textuelles (captions) du dataset Flickr8k.
+    Pipeline améliorée dédiée au chargement, nettoyage, filtrage par fréquence,
+    balisage et tokenisation des légendes textuelles du dataset Flickr8k.
     """
     def __init__(self, start_token="startseq", end_token="endseq"):
         self.start_token = start_token
@@ -36,77 +37,97 @@ class TextProcessingPipeline:
             image_id, image_desc = tokens[0], tokens[1:]
             # Nettoyage de l'extension pour garder uniquement la clé unique
             image_id = image_id.split('.')[0]
-            # Reconstitution de la chaîne de texte
-            image_desc = ' '.join(image_desc)
+            # Reconstitution de la phrase brute
+            desc_phrase = ' '.join(image_desc)
             
             if image_id not in mapping:
                 mapping[image_id] = list()
-            mapping[image_id].append(image_desc)
+            mapping[image_id].append(desc_phrase)
         return mapping
 
-    def clean_descriptions(self, descriptions_dict):
+    def clean_descriptions_base(self, descriptions):
         """
-        Prépare et nettoie l'intégralité du texte : passage en minuscules, 
-        retrait de la ponctuation, élimination des tokens isolés ou numériques.
+        Étape 1 : Nettoyage syntaxique de base (Minuscules, ponctuation, bruits numériques).
+        Renvoie un dictionnaire de phrases nettoyées MAIS sans les balises start/end.
         """
+        cleaned_mapping = dict()
         table = str.maketrans('', '', string.punctuation)
-        cleaned_dict = dict()
         
-        for key, desc_list in descriptions_dict.items():
-            cleaned_list = list()
+        for key, desc_list in descriptions.items():
+            if key not in cleaned_mapping:
+                cleaned_mapping[key] = list()
+            
             for desc in desc_list:
+                # Tokenisation par mot pour le nettoyage individuel
                 words = desc.split()
+                # Passage en minuscules
                 words = [word.lower() for word in words]
+                # Suppression de la ponctuation
                 words = [word.translate(table) for word in words]
+                # Suppression des tokens isolés de moins de 2 lettres (ex: 'a') ou contenant des chiffres
                 words = [word for word in words if len(word) > 1 and word.isalpha()]
                 
-                # Encapsulation par les jetons de contrôle de séquence
-                cleaned_desc = f"{self.start_token} {' '.join(words)} {self.end_token}"
-                cleaned_list.append(cleaned_desc)
-            cleaned_dict[key] = cleaned_list
-        return cleaned_dict
+                # Reconstitution de la phrase intermédiaire nettoyée
+                cleaned_desc = ' '.join(words)
+                cleaned_mapping[key].append(cleaned_desc)
+                
+        return cleaned_mapping
 
-    def _to_list(self, descriptions_dict):
-        """Méthode interne pour aplatir le dictionnaire en une liste de chaînes."""
-        all_desc = list()
-        for key in descriptions_dict.keys():
-            [all_desc.append(d) for d in descriptions_dict[key]]
-        return all_desc
+    def filter_and_finalize_descriptions(self, cleaned_descriptions, min_frequency=3):
+        """
+        Étape 2 & 3 : Analyse globale du corpus pour filtrer les mots rares sous 
+        le seuil 'min_frequency' en les remplaçant par 'unk', puis injection finale 
+        des balises de contrôle de manière sécurisée.
+        """
+        # 1. Comptage global de la fréquence de chaque mot dans tout le dataset
+        word_counts = Counter()
+        for desc_list in cleaned_descriptions.values():
+            for desc in desc_list:
+                word_counts.update(desc.split())
 
-    def fit_tokenizer(self, train_descriptions):
+        # 2. Identification des mots rares et reconstruction finale
+        final_mapping = dict()
+        
+        for key, desc_list in cleaned_descriptions.items():
+            final_mapping[key] = list()
+            for desc in desc_list:
+                words = desc.split()
+                # Remplacement des mots sous le seuil par le jeton générique 'unk'
+                processed_words = [word if word_counts[word] >= min_frequency else 'unk' for word in words]
+                
+                # Ré-assemblage de la phrase finale purifiée
+                processed_desc = ' '.join(processed_words)
+                
+                # Étape Finale : Encadrement strict par vos balises de contrôle
+                caption_with_tokens = f"{self.start_token} {processed_desc} {self.end_token}"
+                final_mapping[key].append(caption_with_tokens)
+                
+        return final_mapping
+
+    def create_tokenizer(self, descriptions):
         """
-        Entraîne le Tokenizer Keras sur le sous-ensemble de descriptions 
-        destiné à l'entraînement du modèle (Train Set).
+        Entraîne l'outil de vectorisation Keras sur l'ensemble des textes 
+        parfaitement nettoyés et balisés.
         """
-        lines = self._to_list(train_descriptions)
+        lines = []
+        for key in descriptions.keys():
+            for desc in descriptions[key]:
+                lines.append(desc)
+                
         self.tokenizer = Tokenizer()
         self.tokenizer.fit_on_texts(lines)
-        
-        # Calcul de la longueur maximale d'une séquence pour le padding futur
-        self.max_length = max(len(d.split()) for d in lines)
         return self.tokenizer
 
-    def save_pipeline(self, tokenizer_path="tokenizer.pkl", metadata_path="text_meta.pkl"):
-        """Sérialise l'état de la pipeline pour une réutilisation ultérieure."""
-        if self.tokenizer is None:
-            raise ValueError("Le tokenizer doit d'abord être entraîné avec 'fit_tokenizer'.")
-        
-        with open(tokenizer_path, 'wb') as f:
-            pickle.dump(self.tokenizer, f)
-            
-        meta = {"max_length": self.max_length, "start_token": self.start_token, "end_token": self.end_token}
-        with open(metadata_path, 'wb') as f:
-            pickle.dump(meta, f)
-
-    def load_pipeline(self, tokenizer_path="tokenizer.pkl", metadata_path="text_meta.pkl"):
-        """Charge un état pré-enregistré de la pipeline textuelle."""
-        with open(tokenizer_path, 'rb') as f:
-            self.tokenizer = pickle.load(f)
-        with open(metadata_path, 'rb') as f:
-            meta = pickle.load(f)
-            self.max_length = meta["max_length"]
-            self.start_token = meta["start_token"]
-            self.end_token = meta["end_token"]
+    def calculate_max_length(self, descriptions):
+        """
+        Calcule la longueur maximale (en nombre de mots) présente dans le dataset.
+        """
+        max_len = 0
+        for key in descriptions.keys():
+            for desc in descriptions[key]:
+                max_len = max(max_len, len(desc.split()))
+        self.max_length = max_len
+        return max_len
 
 
 class ImageProcessingPipeline:

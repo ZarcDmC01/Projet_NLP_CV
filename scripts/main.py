@@ -28,20 +28,25 @@ def main():
 
     print("=== ÉTAPE 1 : TRAITEMENT TEXTUEL ===")
     text_pipe = TextProcessingPipeline()
-    
+
     print("Chargement des descriptions brutes...")
-    raw_desc = text_pipe.load_raw_descriptions(TOKEN_FILE_PATH)
-    print(f"Nombre d'images référencées dans le fichier token : {len(raw_desc)}")
-    
-    print("Nettoyage en cours...")
-    cleaned_desc = text_pipe.clean_descriptions(raw_desc)
-    
-    print("Initialisation et ajustement du Tokenizer...")
-    tokenizer = text_pipe.fit_tokenizer(cleaned_desc)
+    # Optionnel : Vous pouvez passer 'data/Flickr8k.lemma.token.txt' ici si vous voulez tester la version lemmatisée
+    raw_desc = text_pipe.load_raw_descriptions("data/Flickr8k.token.txt") 
+
+    print("Nettoyage syntaxique de base...")
+    base_cleaned_desc = text_pipe.clean_descriptions_base(raw_desc)
+
+    print("Filtrage global des mots rares (Seuil: 3) et injection des balises...")
+    cleaned_desc = text_pipe.filter_and_finalize_descriptions(base_cleaned_desc, min_frequency=3)
+
+    print("Création du dictionnaire et indexation (Tokenizer)...")
+    tokenizer = text_pipe.create_tokenizer(cleaned_desc)
     vocab_size = len(tokenizer.word_index) + 1
-    max_len = text_pipe.max_length
-    print(f"Taille du vocabulaire : {vocab_size} mots uniques.")
-    print(f"Longueur maximale d'une séquence : {max_len} tokens.")
+
+    max_len = text_pipe.calculate_max_length(cleaned_desc)
+
+    print(f"Taille finale du vocabulaire retenu : {vocab_size}")
+    print(f"Longueur maximale d'une description : {max_len}")
     
     text_pipe.save_pipeline()
 
