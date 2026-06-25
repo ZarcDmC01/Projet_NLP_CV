@@ -79,19 +79,18 @@ class TextProcessingPipeline:
     # ÉTAPE 3 : Filtrage des mots rares + balisage
     # ─────────────────────────────────────────────
 
-    def filter_and_finalize_descriptions(self, cleaned_descriptions, min_frequency=3):
-        """
-        Analyse globale du corpus pour filtrer les mots rares sous le seuil
-        'min_frequency' en les remplaçant par 'unk', puis injection finale
-        des balises de contrôle startseq / endseq.
-        """
+    def filter_and_finalize_descriptions(self, cleaned_descriptions, min_frequency=3, valid_ids=None):
         word_counts = Counter()
-        for desc_list in cleaned_descriptions.values():
+        for key, desc_list in cleaned_descriptions.items():
+            if valid_ids is not None and key not in valid_ids:
+                continue
             for desc in desc_list:
                 word_counts.update(desc.split())
 
         final_mapping = dict()
         for key, desc_list in cleaned_descriptions.items():
+            if valid_ids is not None and key not in valid_ids:
+                continue
             final_mapping[key] = list()
             for desc in desc_list:
                 words = desc.split()

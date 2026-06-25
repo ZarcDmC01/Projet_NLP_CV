@@ -24,7 +24,7 @@ def load_image_ids(filename):
     Retourne un set d'identifiants sans extension (.jpg).
     """
     with open(filename, 'r', encoding='utf-8') as f:
-        lines = f.read().strip().split('\\n')
+        lines = f.read().strip().splitlines()
     return set(line.split('.')[0] for line in lines if line.strip())
 
 
@@ -64,7 +64,7 @@ def main():
 
     print("Filtrage par fréquence globale et finalisation (uniquement sur le train set)...")
     train_descriptions = text_pipe.filter_and_finalize_descriptions(
-        descriptions=descriptions,
+        cleaned_descriptions=descriptions,
         valid_ids=train_ids,
         min_frequency=2
     )
@@ -78,7 +78,7 @@ def main():
     print(f"→ Longueur maximale d'une phrase (tokens inclus) : {max_len}")
 
     print("Sauvegarde de la pipeline textuelle pour l'inférence future...")
-    text_pipe.save_pipeline(pipeline_path="data/text_pipeline.pkl", tokenizer_path="data/tokenizer.pkl")
+    text_pipe.save_pipeline(tokenizer_path="data/tokenizer.pkl", metadata_path="data/text_meta.pkl")
 
 
     print("\n=== ÉTAPE 2 : EXTRACTION DES CARACTÉRISTIQUES GRAPHIQUES ===")
