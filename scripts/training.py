@@ -39,13 +39,13 @@ class CaptionTrainingPipeline:
         fe2 = layers.Dense(256, activation="relu")(fe1)
 
         inputs_text = keras.Input(shape=(self.max_length,), name="text_inputs")
-        se1 = layers.Embedding(input_dim=self.vocab_size, output_dim=256, mask_zero=True)(inputs_text)
+        se1 = layers.Embedding(input_dim=self.vocab_size + 1, output_dim=256, mask_zero=True)(inputs_text)
         se2 = layers.Dropout(0.5)(se1)
         se3 = layers.LSTM(256)(se2)
 
         decoder1 = layers.add([fe2, se3])
         decoder2 = layers.Dense(256, activation="relu")(decoder1)
-        outputs = layers.Dense(self.vocab_size, activation="softmax", name="output_layer")(decoder2)
+        outputs = layers.Dense(self.vocab_size + 1, activation="softmax", name="output_layer")(decoder2)
 
         self.model = keras.Model(
             inputs=[inputs_image, inputs_text],
@@ -79,7 +79,7 @@ class CaptionTrainingPipeline:
                     for i in range(1, len(seq)):
                         in_seq, out_seq = seq[:i], seq[i]
                         in_seq = keras.utils.pad_sequences([in_seq], maxlen=self.max_length)[0]
-                        out_seq = to_categorical([out_seq], num_classes=self.vocab_size)[0]
+                        out_seq = to_categorical([out_seq], num_classes=self.vocab_size + 1)[0]
 
                         X1.append(feature)
                         X2.append(in_seq)

@@ -42,7 +42,7 @@ TARGET_IMAGE_SIZE    = (224, 224)
 FEATURE_DIMENSION    = 2048                         
 
 BATCH_SIZE = 64
-EPOCHS = 10
+EPOCHS = 20
 
 
 def main():
