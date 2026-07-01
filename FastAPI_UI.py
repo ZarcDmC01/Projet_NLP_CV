@@ -26,7 +26,7 @@ async def login(request: Request):
 
 @app.get('/signup')
 async def signup(request: Request):
-    return templates.TemplateResponse(request=request, name="signup.html", context={"api_url": API_URL})
+    return templates.TemplateResponse(request=request, name="signup.html", context={"api_url": API_URL})  
 
 @app.get('/load_image')
 async def load_image(request: Request):
