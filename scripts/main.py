@@ -42,7 +42,7 @@ TARGET_IMAGE_SIZE    = (224, 224)
 FEATURE_DIMENSION    = 2048                         
 
 BATCH_SIZE = 64
-EPOCHS = 20
+EPOCHS = 50
 
 
 def main():
@@ -58,6 +58,11 @@ def main():
         raise FileNotFoundError(f"Le fichier de split d'entraînement '{TRAIN_SPLIT_PATH}' est introuvable.")
     train_ids = load_image_ids(TRAIN_SPLIT_PATH)
     print(f"Nombre d'images dans le split d'entraînement : {len(train_ids)}")
+    print("Chargement des IDs officiels du split de validation (dev)...")
+    if not os.path.exists(DEV_SPLIT_PATH):
+        raise FileNotFoundError(f"Le fichier de split de validation '{DEV_SPLIT_PATH}' est introuvable.")
+    dev_ids = load_image_ids(DEV_SPLIT_PATH)
+    print(f"Nombre d'images dans le split de validation : {len(dev_ids)}")
 
     print("Nettoyage syntaxique de base de toutes les légendes...")
     descriptions = text_pipe.clean_descriptions_base(descriptions)
@@ -68,10 +73,16 @@ def main():
         valid_ids=train_ids,
         min_frequency=2
     )
+    print("Préparation des descriptions de validation (mêmes règles, sans re-fit du tokenizer)...")
+    dev_descriptions = text_pipe.filter_and_finalize_descriptions(
+        cleaned_descriptions=descriptions,
+        valid_ids=dev_ids,
+        min_frequency=2
+    )
 
     print("Création et ajustement du Tokenizer Keras...")
     tokenizer = text_pipe.create_tokenizer(train_descriptions)
-    vocab_size = len(tokenizer.word_index) + 1
+    vocab_size = tokenizer.num_words + 1
     max_len = text_pipe.calculate_max_length(train_descriptions)
 
     print(f"→ Taille finale du vocabulaire retenu : {vocab_size}")
@@ -143,6 +154,12 @@ def main():
     }
     print(f"Features d'entraînement après filtrage : {len(train_features)}")
 
+    dev_features = {
+        img_id: feat
+        for img_id, feat in image_features.items()
+        if img_id in dev_ids
+    }
+    print(f"Features de validation après filtrage : {len(dev_features)}")
 
     print("\n=== ÉTAPE 3 : ENTRAÎNEMENT DU MODÈLE FUSION ===")
 
@@ -158,11 +175,15 @@ def main():
         train_features=train_features,
         tokenizer=tokenizer,
         epochs=EPOCHS,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        val_descriptions=dev_descriptions,
+        val_features=dev_features,
+        patience=3,
+        checkpoint_path="data/checkpoint_best.keras"
     )
 
     print("Sauvegarde du modèle fusion entraîné...")
-    train_pipe.save_model("data/caption_model.keras")
+    train_pipe.save_model("data/flickr8k_caption_generator_resnet4.keras")
     print("=== PIPELINE DISQUE PRÊTE ET MODÈLE ENTRAÎNÉ AVEC SUCCÈS ===")
 
 

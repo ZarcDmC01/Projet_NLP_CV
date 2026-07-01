@@ -80,26 +80,17 @@ class TextProcessingPipeline:
     # ─────────────────────────────────────────────
 
     def filter_and_finalize_descriptions(self, cleaned_descriptions, min_frequency=3, valid_ids=None):
-        word_counts = Counter()
-        for key, desc_list in cleaned_descriptions.items():
-            if valid_ids is not None and key not in valid_ids:
-                continue
-            for desc in desc_list:
-                word_counts.update(desc.split())
-
+        """
+        On supprime le remplacement manuel par 'unk'.
+        On se contente de baliser les descriptions valides.
+        """
         final_mapping = dict()
         for key, desc_list in cleaned_descriptions.items():
             if valid_ids is not None and key not in valid_ids:
                 continue
             final_mapping[key] = list()
             for desc in desc_list:
-                words = desc.split()
-                processed_words = [
-                    word if word_counts[word] >= min_frequency else 'unk'
-                    for word in words
-                ]
-                processed_desc = ' '.join(processed_words)
-                caption_with_tokens = f"{self.start_token} {processed_desc} {self.end_token}"
+                caption_with_tokens = f"{self.start_token} {desc} {self.end_token}"
                 final_mapping[key].append(caption_with_tokens)
 
         return final_mapping
@@ -123,15 +114,29 @@ class TextProcessingPipeline:
 
     def create_tokenizer(self, descriptions):
         """
-        Entraîne le Tokenizer Keras sur l'ensemble des textes nettoyés et balisés.
+        Entraîne le Tokenizer en limitant automatiquement la taille du dictionnaire.
         """
         lines = [
             desc
             for desc_list in descriptions.values()
             for desc in desc_list
         ]
-        self.tokenizer = Tokenizer(oov_token='unk')
+        
+        # 1. On instancie un tokenizer temporaire pour compter les fréquences
+        temp_tokenizer = Tokenizer()
+        temp_tokenizer.fit_on_texts(lines)
+        
+        # 2. On définit le seuil (ex: min_frequency = 2 ou 3)
+        min_frequency = 2 
+        
+        # 3. On compte combien de mots dépassent ce seuil
+        vocab_valides = [word for word, count in temp_tokenizer.word_counts.items() if count >= min_frequency]
+        max_features = len(vocab_valides) + 1 # +1 pour le token OOV
+        
+        # 4. On crée le vrai Tokenizer limité à ce nombre de mots
+        self.tokenizer = Tokenizer(num_words=max_features, oov_token='unk')
         self.tokenizer.fit_on_texts(lines)
+        
         return self.tokenizer
 
     def calculate_max_length(self, descriptions):

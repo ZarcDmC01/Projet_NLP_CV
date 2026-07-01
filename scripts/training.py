@@ -15,7 +15,8 @@ class CaptionTrainingPipeline:
 
     def __init__(self, vocab_size, max_length, feature_dim=2048):
         """
-        :param vocab_size:   Taille totale du dictionnaire (len(tokenizer.word_index) + 1)
+        :param vocab_size:   Taille du vocabulaire réellement utilisée par le tokenizer
+                             (tokenizer.num_words + 1, incluant l'index 0 réservé au padding)
         :param max_length:   Longueur maximale d'une légende nettoyée
         :param feature_dim:  Dimension de sortie du backbone CNN
                              (2048 pour ResNet50, 4096 pour VGG16, 2048 pour InceptionV3)
@@ -39,13 +40,13 @@ class CaptionTrainingPipeline:
         fe2 = layers.Dense(256, activation="relu")(fe1)
 
         inputs_text = keras.Input(shape=(self.max_length,), name="text_inputs")
-        se1 = layers.Embedding(input_dim=self.vocab_size + 1, output_dim=256, mask_zero=True)(inputs_text)
+        se1 = layers.Embedding(input_dim=self.vocab_size, output_dim=256, mask_zero=True)(inputs_text)
         se2 = layers.Dropout(0.5)(se1)
         se3 = layers.LSTM(256)(se2)
 
         decoder1 = layers.add([fe2, se3])
         decoder2 = layers.Dense(256, activation="relu")(decoder1)
-        outputs = layers.Dense(self.vocab_size + 1, activation="softmax", name="output_layer")(decoder2)
+        outputs = layers.Dense(self.vocab_size, activation="softmax", name="output_layer")(decoder2)
 
         self.model = keras.Model(
             inputs=[inputs_image, inputs_text],
@@ -79,7 +80,7 @@ class CaptionTrainingPipeline:
                     for i in range(1, len(seq)):
                         in_seq, out_seq = seq[:i], seq[i]
                         in_seq = keras.utils.pad_sequences([in_seq], maxlen=self.max_length)[0]
-                        out_seq = to_categorical([out_seq], num_classes=self.vocab_size + 1)[0]
+                        out_seq = to_categorical([out_seq], num_classes=self.vocab_size)[0]
 
                         X1.append(feature)
                         X2.append(in_seq)
@@ -95,9 +96,13 @@ class CaptionTrainingPipeline:
     # Entraînement
     # ─────────────────────────────────────────────
 
-    def fit(self, train_descriptions, train_features, tokenizer, epochs=20, batch_size=32):
+    def fit(self, train_descriptions, train_features, tokenizer, epochs=50, batch_size=32,
+        val_descriptions=None, val_features=None, patience=3,
+        checkpoint_path=None):
         """
         Lance la boucle d'entraînement principale du réseau de neurones.
+        Si val_descriptions / val_features sont fournis, active l'early stopping
+        sur la loss de validation.
         """
         if self.model is None:
             self.build_model()
@@ -107,12 +112,44 @@ class CaptionTrainingPipeline:
         steps = len(train_descriptions) // batch_size
         generator = self.data_generator(train_descriptions, train_features, tokenizer, batch_size)
 
-        self.model.fit(
-            generator,
+        callbacks = []
+        fit_kwargs = dict(
             epochs=epochs,
             steps_per_epoch=steps,
-            verbose=1
+            verbose=1,
+            callbacks=callbacks
         )
+
+        if val_descriptions is not None and val_features is not None:
+            val_steps = max(1, len(val_descriptions) // batch_size)
+            val_generator = self.data_generator(val_descriptions, val_features, tokenizer, batch_size)
+
+            fit_kwargs["validation_data"] = val_generator
+            fit_kwargs["validation_steps"] = val_steps
+
+            callbacks.append(
+                keras.callbacks.EarlyStopping(
+                    monitor="val_loss",
+                    patience=patience,
+                    restore_best_weights=True,
+                    verbose=1
+                )
+            )
+            print(f"Early stopping activé (patience={patience}) sur {len(val_descriptions)} images de validation.")
+        else:
+            print("Aucune donnée de validation fournie : early stopping désactivé.")
+
+        if checkpoint_path:
+            callbacks.append(
+                keras.callbacks.ModelCheckpoint(
+                    filepath=checkpoint_path,
+                    monitor="val_loss" if (val_descriptions and val_features) else "loss",
+                    save_best_only=True,
+                    verbose=1
+                )
+            )
+
+        self.model.fit(generator, **fit_kwargs)
         return self.model
 
     # ─────────────────────────────────────────────
@@ -219,7 +256,7 @@ class CaptionTrainingPipeline:
     # Persistance du modèle
     # ─────────────────────────────────────────────
 
-    def save_model(self, filepath="caption_model.keras"):
+    def save_model(self, filepath="flickr8k_caption_generator_resnet4.keras"):
         """Sauvegarde le modèle complet entraîné."""
         if self.model is not None:
             self.model.save(filepath)
