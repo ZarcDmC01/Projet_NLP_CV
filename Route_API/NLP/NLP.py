@@ -55,6 +55,20 @@ class NLP():
     def add_caption_tokens(self, tokens: list[str]) -> str:
         return 'startseq ' + ' '.join(tokens) + ' endseq'
 
+    def clean_for_model(self, caption: str) -> str:
+        """Nettoyage minimal utilisé à l'entraînement du modèle Keras :
+        lowercase + suppression ponctuation + mots alpha uniquement (len > 1)
+        + tokens startseq / endseq. Pas de stopwords ni lemmatisation."""
+        text   = self.to_lowercase(caption)
+        text   = self.remove_punctuation(text)
+        tokens = [w for w in text.split() if w.isalpha() and len(w) > 1]
+        return self.add_caption_tokens(tokens)
+
+    @staticmethod
+    def pad_sequence(seq: list[int], maxlen: int) -> list[int]:
+        """Post-padding à zéro jusqu'à maxlen."""
+        return (seq + [0] * maxlen)[:maxlen]
+
     # ------------------------------------------------------------------ #
     #  Pipeline complet pour légendes d'images                            #
     # ------------------------------------------------------------------ #

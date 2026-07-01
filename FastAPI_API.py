@@ -1,8 +1,8 @@
+import os
+os.environ.setdefault("KERAS_BACKEND", "torch")
+
 from contextlib import asynccontextmanager
 
-import torch
-import torch.nn as nn
-import torchvision.models as models
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,26 +18,18 @@ from Route_API.Security.Security_ctrler import router as Security_router
 from Route_API.Monitoring.Monitoring_ctrler import router as Monitor_ctrler
 
 
-def _load_resnet34(device) -> nn.Module:
-    """ResNet34 pré-entraîné sans la couche FC finale → extracteur (512,)."""
-    resnet = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
-    extractor = nn.Sequential(*list(resnet.children())[:-1])
-    return extractor.to(device).eval()
+def _load_inception():
+    import keras
+    return keras.applications.InceptionV3(
+        weights="imagenet", include_top=False, pooling="avg"
+    )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("[API] Démarrage — chargement des modèles...")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # 1. Image : backbone ResNet34 → ImageService
-    feature_extractor = _load_resnet34(device)
-    ImageService.load_torch_backbone(feature_extractor, device)
-
-    # 2. Modèle : LSTM decoder → ModelService
-    ModelService.load(device)
-
+    ImageService.set_model(_load_inception())
+    ModelService.load()
     print("[API] Prêt.")
     yield
     print("[API] Arrêt.")
@@ -52,6 +44,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

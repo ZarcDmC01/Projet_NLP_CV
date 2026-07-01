@@ -1,52 +1,73 @@
-"""
-Architecture du modèle LSTM — opérations atomiques uniquement.
-"""
-
+import os
+import pickle
 from pathlib import Path
 
-import torch
-import torch.nn as nn
+import numpy as np
 
-MODEL_PATH = Path(__file__).parent.parent.parent / "models" / "caption_model_best.pth"
+os.environ.setdefault("KERAS_BACKEND", "torch")
 
-EMBED_DIM  = 256
-HIDDEN_DIM = 512
-NUM_LAYERS = 1
-MAX_LEN    = 40
-MIN_FREQ   = 3
+from Route_API.NLP.NLP import NLP
 
-PAD, UNK, SOS, EOS = "<pad>", "<unk>", "<start>", "<end>"
+MODEL_PATH     = Path(__file__).parent.parent.parent / "flickr8k_caption_generator_resnet2.keras"
+TOKENIZER_PATH = Path(__file__).parent.parent.parent / "tokenizer.pkl"
+
+MAX_LEN  = 34
+FEAT_DIM = 2048
+_SOS     = "startseq"
+_EOS     = "endseq"
+
+_nlp = NLP()
 
 
-class LSTMCaptioner(nn.Module):
-    """Décodeur LSTM : vecteur image (512-dim) → séquence de mots."""
+def _load_vocab() -> tuple[dict, dict]:
+    """Charge le tokenizer entraîné (word_index) et construit le mapping inverse."""
+    with open(TOKENIZER_PATH, "rb") as f:
+        tokenizer = pickle.load(f)
+    w2i = tokenizer.word_index
+    return w2i, {v: k for k, v in w2i.items()}
 
-    def __init__(self, feature_dim: int, embed_dim: int,
-                 hidden_dim: int, vocab_size: int, num_layers: int):
-        super().__init__()
-        self.image_proj = nn.Linear(feature_dim, hidden_dim)
-        self.embedding  = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
-        self.lstm       = nn.LSTM(embed_dim, hidden_dim, num_layers, batch_first=True)
-        self.fc         = nn.Linear(hidden_dim, vocab_size)
-        self.dropout    = nn.Dropout(0.3)
 
-    def forward(self, features, captions):
-        """Passe forward complète (entraînement — teacher forcing)."""
-        h0     = self.image_proj(features).unsqueeze(0)
-        c0     = torch.zeros_like(h0)
-        embeds = self.dropout(self.embedding(captions[:, :-1]))
-        out, _ = self.lstm(embeds, (h0, c0))
-        return self.fc(out)
+class CaptionModel:
 
-    def init_hidden(self, features):
-        """Initialise l'état caché LSTM depuis le vecteur image."""
-        h = self.image_proj(features).unsqueeze(0)
-        c = torch.zeros_like(h)
-        return h, c
+    def __init__(self):
+        self._keras_model     = None
+        self._ready           = False
+        self._w2i, self._i2w  = _load_vocab()
 
-    def step(self, token, h, c):
-        """Un pas de décodage : token courant → logits + nouvel état caché."""
-        embed         = self.embedding(token)
-        out, (h, c)   = self.lstm(embed, (h, c))
-        logits        = self.fc(out.squeeze(1))
-        return logits, h, c
+    # ---- chargement ------------------------------------------------
+
+    def load(self) -> "CaptionModel":
+        import keras
+        self._keras_model = keras.models.load_model(str(MODEL_PATH), compile=False)
+        self._ready = True
+        return self
+
+    # ---- propriétés ------------------------------------------------
+
+    @property
+    def ready(self) -> bool:
+        return self._ready
+
+    @property
+    def vocab_size(self) -> int:
+        return len(self._w2i) + 1
+
+    # ---- inférence -------------------------------------------------
+
+    def generate(self, features: np.ndarray) -> str:
+        seq        = [self._w2i.get(_SOS, 1)]
+        image_feat = features.reshape(1, FEAT_DIM).astype("float32")
+
+        for _ in range(MAX_LEN):
+            padded   = np.array([_nlp.pad_sequence(seq, MAX_LEN)])
+            preds    = self._keras_model.predict([image_feat, padded], verbose=0)
+            next_idx = int(np.argmax(preds[0]))
+            word     = self._i2w.get(next_idx, "")
+            if not word or word == _EOS:
+                break
+            seq.append(next_idx)
+
+        return " ".join(
+            w for i in seq[1:]
+            if (w := self._i2w.get(i, "")) and w != _EOS
+        )
