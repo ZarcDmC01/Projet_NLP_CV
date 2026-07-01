@@ -38,6 +38,8 @@ class CaptionModel:
 
     def load(self) -> "CaptionModel":
         import keras
+        import torch
+        torch.set_num_threads(1)
         self._keras_model = keras.models.load_model(str(MODEL_PATH), compile=False)
         self._ready = True
         return self
