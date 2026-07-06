@@ -6,6 +6,15 @@ models.py
 *.pdf
 *.zip
 Rapport/
+Rapport_images/
 logs_*.txt
 Plan.txt
 Data/
+
+# Modèles ML et artefacts d'entraînement — utilisés uniquement par FastAPI_API (Render), pas par l'UI
+*.keras
+*.pth
+*.pkl
+models/
+vocab/
+patches/
