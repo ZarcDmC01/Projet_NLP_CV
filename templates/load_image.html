@@ -1,15 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    #drop-zone:hover, #drop-zone.dragover {
+        border-color: var(--accent) !important;
+        background-color: rgba(236, 72, 153, 0.06);
+    }
+</style>
 <div class="row justify-content-center">
     <div class="col-md-7">
 
         <!-- Formulaire upload -->
         <div class="card p-4" id="upload-card">
-            <h4 class="mb-4">Charger une image</h4>
+            <h4 class="mb-4">📸 Charger une image</h4>
 
             <div class="mb-3">
-                <label class="form-label text-secondary">Sélectionner une image</label>
-                <input class="form-control bg-dark text-light border-secondary"
+                <label for="file-input" id="drop-zone" class="d-block text-center p-4 mb-1"
+                       style="border: 2px dashed var(--card-border); border-radius: 1rem; cursor: pointer; transition: border-color .2s ease, background-color .2s ease;">
+                    <div style="font-size: 2.2rem;">🗂️</div>
+                    <span class="text-secondary">Clique ou dépose une image ici</span>
+                </label>
+                <input class="form-control bg-dark text-light border-secondary d-none"
                        type="file" id="file-input" accept="image/*" required>
             </div>
 
@@ -19,29 +29,30 @@
             </div>
 
             <button id="submit-btn" class="btn btn-primary w-100" disabled>
-                Générer la légende
+                ✨ Générer la légende
             </button>
         </div>
 
         <!-- État chargement -->
         <div id="loading-card" class="card p-4 text-center d-none">
+            <div style="font-size: 2.5rem;" class="mb-2">🪄</div>
             <div class="spinner-border text-primary mb-3" role="status"></div>
             <p class="text-secondary mb-0">Analyse de l'image en cours…</p>
         </div>
 
         <!-- Résultat -->
         <div id="result-card" class="card p-4 text-center d-none">
-            <h4 class="mb-4">Légende générée</h4>
+            <h4 class="mb-4">🎉 Légende générée</h4>
 
             <img id="result-img" class="img-fluid rounded mb-4"
                  style="max-height: 350px; object-fit: contain;">
 
-            <div class="p-3 rounded mb-4" style="background-color: #0f1117;">
-                <p class="fs-5 mb-0" id="result-caption"></p>
+            <div class="p-3 rounded mb-4" style="background: var(--grad);">
+                <p class="fs-5 mb-0 fw-semibold" id="result-caption" style="color: #0b0d17;"></p>
             </div>
 
             <button class="btn btn-outline-light" id="reset-btn">
-                Charger une autre image
+                🔄 Charger une autre image
             </button>
         </div>
 
@@ -53,6 +64,8 @@
 
 <script>
 const fileInput  = document.getElementById('file-input');
+const dropZone   = document.getElementById('drop-zone');
+const dropLabel  = dropZone.querySelector('span');
 const submitBtn  = document.getElementById('submit-btn');
 const previewBox = document.getElementById('preview-box');
 const previewImg = document.getElementById('preview-img');
@@ -62,16 +75,31 @@ const loadingCard = document.getElementById('loading-card');
 const resultCard  = document.getElementById('result-card');
 const errorAlert  = document.getElementById('error-alert');
 
-// Prévisualisation dès qu'un fichier est sélectionné
-fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
+function showPreview(file) {
     if (!file) return;
-
     const url = URL.createObjectURL(file);
     previewImg.src = url;
     previewBox.classList.remove('d-none');
     submitBtn.disabled = false;
     errorAlert.classList.add('d-none');
+    dropLabel.textContent = `✅ ${file.name}`;
+}
+
+// Prévisualisation dès qu'un fichier est sélectionné
+fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+
+// Glisser-déposer sur la zone d'upload
+['dragover', 'dragleave', 'drop'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropZone.classList.toggle('dragover', evt === 'dragover');
+    });
+});
+dropZone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    fileInput.files = e.dataTransfer.files;
+    showPreview(file);
 });
 
 // Soumission → appel direct à l'API avec le Bearer token
@@ -155,6 +183,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
     resultCard.classList.add('d-none');
     uploadCard.classList.remove('d-none');
     errorAlert.classList.add('d-none');
+    dropLabel.textContent = 'Clique ou dépose une image ici';
 });
 </script>
 {% endblock %}
