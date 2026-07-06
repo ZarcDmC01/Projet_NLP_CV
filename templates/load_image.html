@@ -134,7 +134,7 @@ submitBtn.addEventListener('click', async () => {
 
         // Affichage du résultat
         document.getElementById('result-img').src     = URL.createObjectURL(file);
-        document.getElementById('result-caption').textContent = data.caption;
+        document.getElementById('result-caption').textContent = data.caption_fr || data.caption;
 
         loadingCard.classList.add('d-none');
         resultCard.classList.remove('d-none');

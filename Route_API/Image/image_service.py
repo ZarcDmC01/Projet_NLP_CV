@@ -1,15 +1,24 @@
 import uuid
 
 import numpy as np
+import torch
+import torchvision.transforms as transforms
 
 from Route_API.Image.image import ImageProcessingPipeline
 from Route_API import feature_store
 
+# Normalisation ImageNet standard torchvision, utilisée à l'entraînement (scripts/main.py)
+_TRANSFORM = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
 
 class ImageService:
 
-    _pipeline       = ImageProcessingPipeline(target_size=(299, 299))
-    _model_backbone = None
+    _pipeline       = ImageProcessingPipeline()
+    _model_backbone = None  # torchvision.models.resnet50 (fc remplacé par Identity), en mode eval
 
     # ================================================================
     #  CHARGEMENT DU BACKBONE
@@ -20,16 +29,13 @@ class ImageService:
         cls._model_backbone = model_backbone
 
     # ================================================================
-    #  PREPROCESSING — bytes → (1, 299, 299, 3) normalisé InceptionV3
+    #  PREPROCESSING — bytes → tenseur (1, 3, 224, 224) normalisé ResNet50 (ImageNet)
     # ================================================================
 
     @classmethod
-    def _preprocess(cls, image_bytes: bytes) -> np.ndarray:
+    def _preprocess(cls, image_bytes: bytes) -> torch.Tensor:
         img = cls._pipeline.load_from_bytes(image_bytes)
-        img = cls._pipeline.resize(img)
-        arr = cls._pipeline.to_array(img)   # float32, [0, 255]
-        arr = (arr / 127.5) - 1.0           # InceptionV3 : [-1, 1]
-        return cls._pipeline.add_batch_dim(arr)
+        return _TRANSFORM(img).unsqueeze(0)
 
     # ================================================================
     #  API PUBLIQUE
@@ -40,9 +46,10 @@ class ImageService:
         """Preprocessing + extraction → vecteur numpy (2048,), ou None si backbone absent."""
         if cls._model_backbone is None:
             return None
-        tensor   = cls._preprocess(image_bytes)
-        features = cls._pipeline.extract_features(tensor, cls._model_backbone)
-        return cls._pipeline.flatten_features(features)
+        tensor = cls._preprocess(image_bytes)
+        with torch.no_grad():
+            features = cls._model_backbone(tensor)
+        return features.cpu().numpy().flatten()
 
     # ================================================================
     #  PERSISTANCE via FeatureStore partagé

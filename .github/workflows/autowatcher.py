@@ -17,7 +17,7 @@ class SaveHandler(FileSystemEventHandler):
         if nom not in FICHIERS_SURVEILLES:
             return
         print(f"Changement détecté : {nom}")
-        subprocess.run(["git", "add", "-A"])
+        subprocess.run(["git", "add", nom])
         result = subprocess.run(
             ["git", "commit", "-m", f"auto: {nom}"],
             capture_output=True, text=True

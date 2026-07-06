@@ -2,6 +2,7 @@ import numpy as np
 
 from Route_API.Model.model import CaptionModel, MODEL_PATH, FEAT_DIM
 from Route_API import feature_store
+from Route_API.Translation.translation_service import TranslationService
 
 
 class ModelService:
@@ -32,7 +33,12 @@ class ModelService:
                 "caption": f"Features obsolètes ({features.shape[0]}-dim) — re-uploadez l'image.",
             }
 
-        return {"status": "ok", "caption": cls._caption_model.generate(features)}
+        caption = cls._caption_model.generate(features)
+        return {
+            "status":     "ok",
+            "caption":    caption,
+            "caption_fr": TranslationService.translate_to_french(caption),
+        }
 
     @classmethod
     def get_status(cls) -> dict:
