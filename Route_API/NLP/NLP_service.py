@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pandas as pd
 from fastapi import APIRouter
 
 from Route_API.NLP.NLP import NLP
@@ -17,6 +16,7 @@ def build_vocab() -> tuple[dict, dict]:
     avec le même nettoyage que l'entraînement du modèle Keras.
     Réplique le tri fréquence-décroissante de Keras Tokenizer (index à partir de 1).
     """
+    import pandas as pd  # lourd (~50-70 Mo résidents) — chargé seulement si build_vocab est réellement appelée
     df = pd.read_csv(_VOCAB_PATH, names=["id", "caption"], delimiter="\t")
 
     counts: dict[str, int] = {}

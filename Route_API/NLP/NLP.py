@@ -1,19 +1,36 @@
 import re
 import string
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.stem.porter import PorterStemmer
 
-nltk.download('punkt_tab', quiet=True)
-nltk.download('stopwords', quiet=True)
-nltk.download('wordnet', quiet=True)
-
-_lemmatizer = WordNetLemmatizer()
-_stemmer = PorterStemmer()
-_stop_words = set(stopwords.words('english'))
 _punct_table = str.maketrans('', '', string.punctuation)
+
+# Le pipeline d'inférence (CaptionModel.generate → NLP.pad_sequence) n'a besoin
+# d'aucune ressource nltk : le chargement (téléchargement des corpus + objets
+# stopwords/lemmatizer/stemmer, plusieurs dizaines de Mo en RAM) est donc différé
+# et ne se déclenche que si preprocess_caption/preprocess_captions sont réellement
+# appelés (utilitaires de préparation de données, pas utilisés en production API).
+_nltk_ready = False
+_lemmatizer = None
+_stemmer = None
+_stop_words = None
+
+
+def _ensure_nltk():
+    global _nltk_ready, _lemmatizer, _stemmer, _stop_words
+    if _nltk_ready:
+        return
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.stem import WordNetLemmatizer
+    from nltk.stem.porter import PorterStemmer
+
+    nltk.download('punkt_tab', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    nltk.download('wordnet', quiet=True)
+
+    _lemmatizer = WordNetLemmatizer()
+    _stemmer = PorterStemmer()
+    _stop_words = set(stopwords.words('english'))
+    _nltk_ready = True
 
 
 class NLP():
@@ -37,15 +54,20 @@ class NLP():
         return ' '.join(text.split())
 
     def tokenize(self, text: str) -> list[str]:
+        _ensure_nltk()
+        from nltk.tokenize import word_tokenize
         return word_tokenize(text)
 
     def remove_stopwords(self, tokens: list[str]) -> list[str]:
+        _ensure_nltk()
         return [t for t in tokens if t not in _stop_words]
 
     def lemmatize(self, tokens: list[str]) -> list[str]:
+        _ensure_nltk()
         return [_lemmatizer.lemmatize(t) for t in tokens]
 
     def stem(self, tokens: list[str]) -> list[str]:
+        _ensure_nltk()
         return [_stemmer.stem(t) for t in tokens]
 
     # ------------------------------------------------------------------ #
