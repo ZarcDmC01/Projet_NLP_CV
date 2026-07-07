@@ -1,3 +1,4 @@
+import gc
 import uuid
 
 import numpy as np
@@ -48,8 +49,11 @@ class ImageService:
             return None
         tensor = cls._preprocess(image_bytes)
         with torch.no_grad():
-            features = cls._model_backbone(tensor)
-        return features.cpu().numpy().flatten()
+            output = cls._model_backbone(tensor)
+        features = output.cpu().numpy().flatten()
+        del tensor, output
+        gc.collect()
+        return features
 
     # ================================================================
     #  PERSISTANCE via FeatureStore partagé

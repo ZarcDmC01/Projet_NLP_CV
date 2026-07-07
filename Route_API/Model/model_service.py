@@ -1,3 +1,5 @@
+import gc
+
 import numpy as np
 
 from Route_API.Model.model import CaptionModel, MODEL_PATH, FEAT_DIM
@@ -34,11 +36,14 @@ class ModelService:
             }
 
         caption = cls._caption_model.generate(features)
-        return {
+        result = {
             "status":     "ok",
             "caption":    caption,
             "caption_fr": TranslationService.translate_to_french(caption),
         }
+        del features
+        gc.collect()
+        return result
 
     @classmethod
     def get_status(cls) -> dict:
