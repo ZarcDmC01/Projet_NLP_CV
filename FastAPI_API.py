@@ -30,7 +30,10 @@ from Route_API.Monitoring.Monitoring_ctrler import router as Monitor_ctrler
 # Seuil de RAM (utilisation courante, cf. _current_rss_mb) au-delà duquel on refuse
 # les nouvelles requêtes lourdes (503) plutôt que de laisser Render tuer toute
 # l'instance (limite 512Mi sur le plan gratuit).
-MAX_RSS_MB = int(os.environ.get("MAX_RSS_MB", "450"))
+# NB : la RAM au repos une fois les modèles chargés tourne déjà autour de 540-555 Mo
+# (torch + torchvision + keras + ResNet50 + LSTM) sans que Render ne tue le process
+# — un seuil trop bas (ex. 450) bloque donc TOUTES les requêtes en permanence.
+MAX_RSS_MB = int(os.environ.get("MAX_RSS_MB", "700"))
 
 
 def _current_rss_mb() -> float:
